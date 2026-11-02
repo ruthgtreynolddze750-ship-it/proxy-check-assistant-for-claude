@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>目标回显实验</title></head>
+<body><h1>目标回显实验</h1><p>仅限受控测试；配置身份与实际代理仍未确认。</p>
+<label>预期 IPv4 <input id="expected" autocomplete="off" spellcheck="false" type="text"></label>
+<button id="start" type="button">打开目标回显页</button><button id="status" type="button">查看状态</button>
+<button id="clear" type="button">清除本次状态</button>
+<p>候选邀请信息：<span id="pairing-invitation">尚未形成候选</span></p>
+<label>启动中心一次性配对信息 <input id="pairing-code" autocomplete="off" spellcheck="false" type="password"></label>
+<button id="send" type="button">发送候选到启动中心</button><pre id="result">等待操作</pre>
+<script src="popup.js"></script></body></html>

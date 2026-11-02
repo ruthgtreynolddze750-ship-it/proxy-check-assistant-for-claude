@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>浏览器离线回显演示</title>
+</head>
+<body>
+  <h1>离线模拟：不是浏览器实际出口</h1>
+  <p>仅输入虚拟样本；此页面不联网，也不验证浏览器身份。</p>
+  <label>虚拟回显<textarea id="trace"></textarea></label>
+  <label>虚拟预期 IP<input id="expected"></label>
+  <label>虚拟目标域名<input id="host" value="claude.ai"></label>
+  <button id="check" type="button">处理离线样本</button>
+  <pre id="result">等待离线样本</pre>
+  <script src="offline_page.js"></script>
+</body>
+</html>

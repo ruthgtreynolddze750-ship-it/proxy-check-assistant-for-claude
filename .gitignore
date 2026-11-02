@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+/work/
+/.agent-delivery/
+/packaging/tooling/
+/packaging/builds/
+/packaging/backup-scope-*/
+/src/protection/build-*/

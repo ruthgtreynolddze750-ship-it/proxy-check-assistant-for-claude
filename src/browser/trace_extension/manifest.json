@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "minimum_chrome_version": "106",
+  "name": "Claude 目标回显实验",
+  "version": "0.1.0",
+  "description": "仅用于受控实验：采集指定页面回显，不验证用户配置身份或防直连。",
+  "permissions": ["webRequest"],
+  "host_permissions": ["https://claude.ai/*", "http://127.0.0.1/*"],
+  "background": {"service_worker": "worker.js"},
+  "action": {"default_popup": "popup.html"},
+  "content_scripts": [{"matches": ["https://claude.ai/cdn-cgi/trace*"], "js": ["content.js"], "run_at": "document_idle", "all_frames": false}]
+}
