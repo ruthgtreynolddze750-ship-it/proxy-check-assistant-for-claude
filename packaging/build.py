@@ -18,7 +18,7 @@ APP_FILES = (
     'packaging/licenses/Python-PSF.txt', 'packaging/licenses/Tcl.txt', 'packaging/licenses/Tk.txt',
     'packaging/licenses/PyInstaller.txt', 'packaging/licenses/Inno-Setup.txt',
     'packaging/licenses/OpenSSL.txt', 'packaging/licenses/zlib.txt', 'packaging/licenses/XZ.txt', 'packaging/licenses/libmpdec.txt',
-    'src/ui/__init__.py', 'src/ui/app.py', 'src/ui/model.py', 'src/ui/adapters.py', 'src/ui/monitoring_presentation.py', 'src/ui/monitor_binding.py', 'src/ui/release_setup.py', 'src/ui/shortcut_setup.py', 'src/ui/onboarding.py', 'src/ui/desktop_presentation.py',
+    'src/ui/__init__.py', 'src/ui/app.py', 'src/ui/model.py', 'src/ui/adapters.py', 'src/ui/monitoring_presentation.py', 'src/ui/monitor_binding.py', 'src/ui/release_setup.py', 'src/ui/shortcut_setup.py', 'src/ui/onboarding.py', 'src/ui/desktop_presentation.py', 'src/ui/theme.py',
     'src/core/backend.py', 'src/core/monitoring.py', 'src/core/release_trust.py', 'src/core/release_v1_679_135_manifest.json',
     'src/browser/inspection.py', 'src/browser/shortcut_selection.py', 'src/browser/session_binding.py',
     'src/browser/cdp_pipe.py', 'src/browser/request_probe.py',

@@ -18,6 +18,7 @@ from .monitoring_presentation import (present_snapshot, present_relay_snapshot, 
                                      runtime_report_lines, present_manager_diagnostic)
 from .monitor_binding import BindingEvidence, ManagedMonitorBinding, _config_key
 from .desktop_presentation import desktop_summary, desktop_report_lines
+from .theme import apply_theme, follow_tone, style_report
 
 MAPPING_LABELS = {'unknown': '未确认', 'required': '需要目标映射', 'not_required': '明确不需要目标映射'}
 MONITOR_REASONS = {'started': '监测已开始', 'stopped': '监测已停止', 'manual_resume': '用户发起手动复检', 'check_pass': '独立检测通过', 'exit_ip_mismatch': '独立出口与预期不一致', 'ip_mismatch': '出口与预期不一致', 'target_exit_mismatch': '目标请求出口与预期不一致', 'owner_unconfirmed': '监听归属未确认', 'owner_changed': '监听归属发生变化', 'proxy_unavailable': '代理入口不可用', 'manager_unavailable': '管理器不可用', 'mapping_unconfirmed': '映射或区域未通过', 'evidence_unconfirmed': '检测证据未确认', 'evidence_expired': '检测证据已过期', 'check_timeout': '检测超时', 'detector_error': '检测未能完成', 'previous_check_running': '先前检测尚未结束', 'clock_unavailable': '检测计时未确认'}
@@ -142,7 +143,8 @@ class App:
         if monitor_max_samples == 1:
             self.monitor_summary.set('单轮诊断：尚未开始，最多采样一次 · 阻断保护：未确认')
         root.title('Claude 专用启动中心')
-        root.geometry('900x840')
+        apply_theme(root)
+        root.geometry('900x900')
         root.minsize(760, 700)
         root.columnconfigure(0, weight=1)
         root.rowconfigure(4, weight=1)
@@ -151,10 +153,14 @@ class App:
         header.grid(row=0, column=0, sticky='ew')
         title_row = ttk.Frame(header)
         title_row.pack(fill='x')
-        ttk.Label(title_row, text='Claude 专用启动中心', font=('Microsoft YaHei UI', 17, 'bold')).pack(side='left')
+        ttk.Label(title_row, text='Claude 专用启动中心', style='Title.TLabel').pack(side='left')
         self.summary = tk.StringVar(value='等待配置与检测 · 桌面端：未确认 · 网页端：未确认')
-        ttk.Label(header, textvariable=self.summary, wraplength=780).pack(anchor='w', pady=(8, 0))
-        ttk.Label(header, textvariable=self.monitor_summary, wraplength=780).pack(anchor='w', pady=(4, 0))
+        self.summary_label = ttk.Label(header, textvariable=self.summary, wraplength=780)
+        self.summary_label.pack(anchor='w', pady=(8, 0))
+        follow_tone(self.summary_label, self.summary)
+        self.monitor_summary_label = ttk.Label(header, textvariable=self.monitor_summary, wraplength=780)
+        self.monitor_summary_label.pack(anchor='w', pady=(4, 0))
+        follow_tone(self.monitor_summary_label, self.monitor_summary)
         self.desktop_protect_summary = tk.StringVar(value=desktop_summary(None))
         if desktop_runtime is not None:
             ttk.Label(header, textvariable=self.desktop_protect_summary, wraplength=780).pack(anchor='w', pady=(4, 0))
@@ -164,11 +170,11 @@ class App:
 
         actions = ttk.Frame(root, padding=(18, 0, 18, 6))
         actions.grid(row=1, column=0, sticky='ew')
-        self.detect_button = ttk.Button(actions, text='重新检测', command=self.detect)
+        self.detect_button = ttk.Button(actions, text='重新检测', command=self.detect, style='Accent.TButton')
         self.detect_button.pack(side='left', padx=(0, 8))
-        self.desktop_button = ttk.Button(actions, text='启动桌面端', command=self.launch_desktop, state='disabled')
+        self.desktop_button = ttk.Button(actions, text='启动桌面端', command=self.launch_desktop, state='disabled', style='Accent.TButton')
         self.desktop_button.pack(side='left', padx=(0, 8))
-        self.browser_button = ttk.Button(actions, text='打开网页端', command=self.launch_browser, state='disabled')
+        self.browser_button = ttk.Button(actions, text='打开网页端', command=self.launch_browser, state='disabled', style='Accent.TButton')
         self.browser_button.pack(side='left')
         self.desktop_protect_button = ttk.Button(actions, text='保护启动桌面端', command=self.protect_desktop, state='disabled')
         self.desktop_stop_button = ttk.Button(actions, text='停止桌面端保护', command=self.stop_desktop_protection, state='disabled')
@@ -221,17 +227,17 @@ class App:
         self.desktop_lookup = tk.StringVar(value='尚未查找')
         ttk.Label(settings, textvariable=self.desktop_lookup).grid(row=1, column=3, padx=(8, 0), pady=(6, 0), sticky='w')
         ttk.Button(settings, text='核验管理器安装来源', command=self.open_release_setup).grid(row=2, column=0, sticky='w', pady=(7, 0))
-        self.save_button = ttk.Button(settings, text='保存本机配置', command=self.save_settings)
+        self.save_button = ttk.Button(settings, text='保存本机配置', command=self.save_settings, style='Accent.TButton')
         self.save_button.grid(row=2, column=1, sticky='e', pady=(7, 0))
-        ttk.Label(settings, text='可信路径和指纹需来自独立核验，不能把现场运行程序的指纹自动当作可信基准。', wraplength=700).grid(row=3, column=0, columnspan=2, sticky='w')
-        ttk.Label(settings, text='点击检测将经指定代理访问您选择的出口检测服务及 Claude。', wraplength=700).grid(row=4, column=0, columnspan=2, sticky='w')
+        ttk.Label(settings, text='可信路径和指纹需来自独立核验，不能把现场运行程序的指纹自动当作可信基准。', wraplength=700, style='Muted.TLabel').grid(row=3, column=0, columnspan=2, sticky='w')
+        ttk.Label(settings, text='点击检测将经指定代理访问您选择的出口检测服务及 Claude。', wraplength=700, style='Muted.TLabel').grid(row=4, column=0, columnspan=2, sticky='w')
         ttk.Label(settings, textvariable=self.trust_status, wraplength=700).grid(row=5, column=0, columnspan=2, sticky='w')
 
         report_actions = ttk.Frame(root, padding=(18, 4, 18, 4))
         report_actions.grid(row=3, column=0, sticky='ew')
         self.full_ip = tk.BooleanVar(value=False)
         ttk.Checkbutton(report_actions, text='报告包含完整 IP（主动选择）', variable=self.full_ip, command=self.refresh).pack(side='left')
-        self.start_monitor_button = ttk.Button(report_actions, text='开始单轮诊断' if monitor_max_samples == 1 else '开始监测', command=self.start_monitor)
+        self.start_monitor_button = ttk.Button(report_actions, text='开始单轮诊断' if monitor_max_samples == 1 else '开始监测', command=self.start_monitor, style='Accent.TButton')
         self.start_monitor_button.pack(side='left', padx=(4, 0))
         self.stop_monitor_button = ttk.Button(report_actions, text='停止诊断' if monitor_max_samples == 1 else '停止监测', command=self.stop_monitor)
         self.stop_monitor_button.pack(side='left', padx=(4, 0))
@@ -245,6 +251,7 @@ class App:
         details.columnconfigure(0, weight=1)
         details.rowconfigure(0, weight=1)
         self.report = tk.Text(details, height=10, wrap='word', state='disabled')
+        style_report(self.report)
         self.report.grid(row=0, column=0, sticky='nsew')
         scroll = ttk.Scrollbar(details, command=self.report.yview)
         scroll.grid(row=0, column=1, sticky='ns')

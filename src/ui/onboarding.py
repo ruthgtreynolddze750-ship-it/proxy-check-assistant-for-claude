@@ -149,12 +149,12 @@ class FirstSetupDialog:
                     '桌面端：保存后返回主窗口，点击“查找桌面端”并选择；如已有实例请正常退出，再重新检测。满足条件后启动并由您确认消息收发；桌面端实际出口仍未确认。\n'
                     '查找不到端口或快捷方式时，可返回主窗口手动填写；缺少安装包或无法核验时，管理器基准保持未确认。\n'
                     '修改表单会撤销未保存的管理器候选，请最后核验。配置明文保存，不要填写凭据或聊天内容；点击检测才会联网。')
-        self.guide_label = ttk.Label(self.window, text=guidance, wraplength=810)
+        self.guide_label = ttk.Label(self.window, text=guidance, wraplength=810, style='Muted.TLabel')
         self.guide_label.grid(row=12, column=0, columnspan=3, sticky='w', padx=12, pady=8)
         ttk.Label(self.window, textvariable=app.summary, wraplength=810).grid(row=13, column=0, columnspan=3, sticky='w', padx=12, pady=4)
         buttons = ttk.Frame(self.window)
         buttons.grid(row=14, column=0, columnspan=3, sticky='e', padx=12, pady=8)
-        self.save_button = ttk.Button(buttons, text='保存本机配置', command=app.save_settings)
+        self.save_button = ttk.Button(buttons, text='保存本机配置', command=app.save_settings, style='Accent.TButton')
         self.save_button.pack(side='left', padx=4)
         self.detect_button = ttk.Button(buttons, text='重新检测（联网）', command=app.detect)
         self.detect_button.pack(side='left', padx=4)
