@@ -217,11 +217,15 @@ class AsyncTests(unittest.TestCase):
         self.assertEqual(str(self.app.desktop_button['state']), 'normal')
         self.assertEqual(str(self.app.browser_button['state']), 'disabled')
 
-    def test_required_mapping_cannot_be_skipped_by_adapter(self):
+    def test_mapping_requirement_is_fixed_and_unverified_mapping_still_blocks(self):
         self.backend.detect = lambda config, app_id: Probe(Result(common=Status.PASS, desktop=Status.PASS, desktop_instance=Status.PASS), ('valid-id',))
         self.app.fields['mapping_mode'].set('需要目标映射')
+        self.app.fields['mapping_targets'].set('192.0.2.6 claude.ai')
         with patch('ui.app.messagebox.showinfo'):
             self.assertTrue(self.app.save_settings())
+        self.assertEqual(self.app.config.mapping_mode, 'not_required')
+        self.assertEqual(self.app.config.mapping_targets, '')
+        self.assertEqual(str(self.app.entries[6]['state']), 'disabled')
         self.backend.release.set()
         self.app.detect()
         wait_for(self.root, lambda: not self.app.busy)

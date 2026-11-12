@@ -128,7 +128,8 @@ class CoreIntegrationTests(unittest.TestCase):
                     with patch('ui.app.filedialog.asksaveasfilename', return_value=str(report_file)):
                         app.export_report()
                     report = report_file.read_text(encoding='utf-8')
-                    self.assertIn('目标映射与 ISP 区域：通过', report)
+                    self.assertIn('ISP 区域核验（不要求映射）：通过', report)
+                    self.assertIn('映射要求：用户选择不需要映射', report)
                     self.assertIn('203.0.*.*', report)
                     self.assertNotIn('203.0.113.42', report)
                     self.assertNotIn('SECRET', report)
@@ -138,7 +139,7 @@ class CoreIntegrationTests(unittest.TestCase):
                     app.full_ip.set(True)
                     app.refresh()
                     self.assertIn('203.0.113.42', app.report.get('1.0', 'end'))
-                    app.fields['mapping_targets'].set('192.0.2.6 claude.ai')
+                    app.fields['expected_zone'].set('other-zone')
                     self.assertEqual(str(app.desktop_button['state']), 'disabled')
             finally:
                 window.destroy()

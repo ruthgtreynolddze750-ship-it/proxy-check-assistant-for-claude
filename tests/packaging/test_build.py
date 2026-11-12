@@ -72,6 +72,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_guide_is_in_input_manifest(self):
         self.assertIn('src/ui/onboarding.py', build.APP_FILES)
+        self.assertIn('src/ui/health_check.py', build.APP_FILES)
 
     def test_user_facing_build_excludes_observation_prototype(self):
         stage = self.root / 'business-stage'

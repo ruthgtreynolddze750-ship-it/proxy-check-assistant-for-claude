@@ -213,11 +213,23 @@ def _process_present(image):
                for row in csv.reader(result.stdout.splitlines()))
 
 
+# R44: some Windows builds leave a working listener out of the listen table. Only then connect once
+# (TCP handshake only, no data) and use the owner of the accepted server-side socket instead.
+_PORT_ROWS_PS = (
+    "function rows([int]$port) { $r = @(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue "
+    "| Where-Object { $_.LocalAddress -in @('127.0.0.1','0.0.0.0','::') }); "
+    "if ($r.Count -eq 0) { $c = New-Object Net.Sockets.TcpClient; "
+    "try { $c.Connect('127.0.0.1', $port); $local = $c.Client.LocalEndPoint.Port; "
+    "for ($i = 0; $i -lt 5 -and $r.Count -eq 0; $i++) { "
+    "$r = @(Get-NetTCPConnection -LocalPort $port -RemotePort $local -ErrorAction SilentlyContinue); "
+    "if ($r.Count -eq 0) { Start-Sleep -Milliseconds 100 } } } catch { $r = @() } finally { $c.Close() } }; $r }; ")
+
+
 def _manager_owns_port(port):
     if type(port) is not int or not 1 <= port <= 65535:
         raise ValueError('invalid port')
-    script = (f"$p = {port}; "
-              "$c = Get-NetTCPConnection -State Listen -LocalPort $p -ErrorAction Stop; "
+    script = (_PORT_ROWS_PS + f"$p = {port}; "
+              "$c = @(rows $p); "
               "$found = $false; $safe = $true; foreach ($x in $c) { "
               "if ($x.LocalAddress -ne '127.0.0.1' -and $x.LocalAddress -ne '0.0.0.0') { continue }; "
               "$owner = Get-Process -Id $x.OwningProcess -ErrorAction Stop; "
@@ -265,8 +277,8 @@ def _capture_listener_owners(manager_port, proxy_port):
             or manager_port == proxy_port):
         raise ValueError('invalid listener ports')
     script = ("$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); "
-              "function listeners([int]$port) { @(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction Stop "
-              "| Where-Object { $_.LocalAddress -in @('127.0.0.1','0.0.0.0','::') } | ForEach-Object { "
+              + _PORT_ROWS_PS +
+              "function listeners([int]$port) { @(rows $port | ForEach-Object { "
               "$p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$_.OwningProcess) -ErrorAction Stop; "
               "if (!$p -or !$p.ExecutablePath -or !$p.CreationDate) { throw 'process unavailable' }; "
               "[PSCustomObject]@{pid=[int]$p.ProcessId; started=[string]$p.CreationDate.ToUniversalTime().Ticks; path=$p.ExecutablePath} }) }; "

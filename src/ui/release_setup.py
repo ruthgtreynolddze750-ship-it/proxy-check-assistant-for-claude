@@ -25,6 +25,7 @@ class ReleaseDialog:
         self.owner_status = tk.StringVar(value='监听进程与端口：未确认')
         self.signature_status = tk.StringVar(value='Windows 签名：未确认')
         self.busy = False
+        self._auto_accept = False
         self._generation = 0
         self._candidate = None
         self._snapshot = None
@@ -52,6 +53,7 @@ class ReleaseDialog:
 
     def _clear_candidate(self):
         self._generation += 1
+        self._auto_accept = False
         self._candidate = None
         self._snapshot = None
         self._candidate_at = None
@@ -76,6 +78,19 @@ class ReleaseDialog:
                 self.app._invalidate()
             self._clear_candidate()
             self.directory.set(selected)
+
+    def prefill(self, installer, directory):
+        """Wizard auto-fill: select both paths, inspect, and accept a complete pass without another click."""
+        if self.busy or self.app._operation == 'launch':
+            return False
+        if self.app._candidate_previous is not None:
+            self.app._invalidate()
+        self._clear_candidate()
+        self.installer.set(installer)
+        self.directory.set(directory)
+        self.inspect()
+        self._auto_accept = self.busy
+        return self.busy
 
     def _current_snapshot(self):
         if self.app._operation == 'launch' or not self.installer.get() or not self.directory.get():
@@ -151,7 +166,12 @@ class ReleaseDialog:
                 if not self._valid_result(result, snapshot):
                     self._candidate = None
                     self._snapshot = None
-                    self.summary.set('无法确认完整候选；版本不匹配或所需证据不足。')
+                    self._auto_accept = False
+                    if getattr(result, 'package_match', None) != 'pass':
+                        hint = '安装包不是 1.679.135 版本，或选错了文件。'
+                    else:
+                        hint = '安装包对了，但已安装的程序或正在运行的代理管理器对不上：请确认它开着、端口在工作、版本没有自动升级。'
+                    self.summary.set('无法确认完整候选：' + hint)
                     continue
                 if phase == 'inspect':
                     self._candidate = result.baseline
@@ -159,6 +179,9 @@ class ReleaseDialog:
                     self._candidate_at = self.clock()
                     self.accept_button.configure(state='normal')
                     self.summary.set('已取得候选；签名未获信任。采用前将再次核验，随后还需单独保存配置。')
+                    if self._auto_accept:
+                        self._auto_accept = False
+                        self.accept()
                 elif self._candidate is not None and result.baseline == self._candidate:
                     inspector = self.inspector
                     baseline = self._candidate

@@ -21,6 +21,8 @@ from .desktop_presentation import desktop_summary, desktop_report_lines
 from .theme import apply_theme, follow_tone, style_report
 
 MAPPING_LABELS = {'unknown': '未确认', 'required': '需要目标映射', 'not_required': '明确不需要目标映射'}
+# R42: the user fixed the mapping requirement; the core still supports the other modes.
+FIXED_MAPPING_MODE = 'not_required'
 MONITOR_REASONS = {'started': '监测已开始', 'stopped': '监测已停止', 'manual_resume': '用户发起手动复检', 'check_pass': '独立检测通过', 'exit_ip_mismatch': '独立出口与预期不一致', 'ip_mismatch': '出口与预期不一致', 'target_exit_mismatch': '目标请求出口与预期不一致', 'owner_unconfirmed': '监听归属未确认', 'owner_changed': '监听归属发生变化', 'proxy_unavailable': '代理入口不可用', 'manager_unavailable': '管理器不可用', 'mapping_unconfirmed': '映射或区域未通过', 'evidence_unconfirmed': '检测证据未确认', 'evidence_expired': '检测证据已过期', 'check_timeout': '检测超时', 'detector_error': '检测未能完成', 'previous_check_running': '先前检测尚未结束', 'clock_unavailable': '检测计时未确认'}
 MONITOR_ACTIONS = {'alert_only': '仅提示，未确认断连', 'monitor_only': '仅监测，未执行断连'}
 _BROWSER_MONITOR_BLOCKED = object()
@@ -108,6 +110,10 @@ class App:
         self._shortcut_dialog = None
         self._guide_dialog = None
         self._first_setup_dialog = None
+        self._health_dialog = None
+        from .health_check import repair_manager, run_health_check
+        self.health_check = run_health_check
+        self.health_repair = repair_manager
         self._candidate_previous = None
         self._candidate_recheck = None
         self._pending_save_config = None
@@ -176,6 +182,8 @@ class App:
         self.desktop_button.pack(side='left', padx=(0, 8))
         self.browser_button = ttk.Button(actions, text='打开网页端', command=self.launch_browser, state='disabled', style='Accent.TButton')
         self.browser_button.pack(side='left')
+        self.health_button = ttk.Button(actions, text='环境体检', command=self.open_health_check)
+        self.health_button.pack(side='left', padx=(8, 0))
         self.desktop_protect_button = ttk.Button(actions, text='保护启动桌面端', command=self.protect_desktop, state='disabled')
         self.desktop_stop_button = ttk.Button(actions, text='停止桌面端保护', command=self.stop_desktop_protection, state='disabled')
         self.desktop_resume_button = ttk.Button(actions, text='恢复桌面端保护', command=self.resume_desktop_protection, state='disabled')
@@ -212,8 +220,11 @@ class App:
             ttk.Label(group, text=label).grid(row=row, column=0, sticky='w', padx=(0, 12), pady=3)
             var = tk.StringVar()
             self.fields[key] = var
-            entry = ttk.Combobox(group, textvariable=var, state='readonly', values=tuple(MAPPING_LABELS.values())) if key == 'mapping_mode' else ttk.Entry(group, textvariable=var, show='●' if key in ('expected_ip', 'manager_sha256') else '')
+            entry = ttk.Combobox(group, textvariable=var, state='disabled', values=(MAPPING_LABELS[FIXED_MAPPING_MODE],)) if key == 'mapping_mode' else ttk.Entry(group, textvariable=var, show='●' if key in ('expected_ip', 'manager_sha256') else '')
             entry.grid(row=row, column=1, sticky='ew', pady=3)
+            if key == 'mapping_targets':
+                self._mapping_targets_entry = entry
+                entry.configure(state='disabled')
             self.entries.append(entry)
             var.trace_add('write', self._invalidate)
         ttk.Button(proxy_settings, text='查找已有端口', command=self.open_port_candidates).grid(row=row_by_tab[proxy_settings], column=1, sticky='e', pady=(5, 0))
@@ -268,6 +279,8 @@ class App:
             pass
         except (ValueError, TypeError, OSError):
             messagebox.showwarning('配置未读取', '配置文件无法读取或格式不正确，请重新填写。', parent=root)
+        if self.config.mapping_mode != FIXED_MAPPING_MODE or self.config.mapping_targets:
+            self.config = replace(self.config, mapping_mode=FIXED_MAPPING_MODE, mapping_targets='')
         self._put_config(self.config)
         try:
             self.config.validate_common()
@@ -1045,7 +1058,8 @@ class App:
             return False
         try:
             values = {k: int(v.get()) if k in ('port', 'manager_port') else v.get().strip() for k, v in self.fields.items()}
-            values['mapping_mode'] = next((key for key, label in MAPPING_LABELS.items() if label == values['mapping_mode']), 'unknown')
+            values['mapping_mode'] = FIXED_MAPPING_MODE
+            values['mapping_targets'] = ''
             config = Config(**values)
             config.validate()
         except (ValueError, OSError) as exc:
@@ -1318,7 +1332,8 @@ class App:
         self.save_button.configure(state='disabled' if self.busy else 'normal')
         self.desktop_choice.configure(state='disabled' if self._operation == 'launch' else 'readonly')
         for index, entry in enumerate(self.entries):
-            entry.configure(state='disabled' if self._operation == 'launch' else ('readonly' if isinstance(entry, ttk.Combobox) or index in (2, 3) else 'normal'))
+            fixed = isinstance(entry, ttk.Combobox) or entry is self._mapping_targets_entry
+            entry.configure(state='disabled' if self._operation == 'launch' or fixed else ('readonly' if index in (2, 3) else 'normal'))
         if self._first_setup_dialog is not None and self._first_setup_dialog.window.winfo_exists():
             self._first_setup_dialog.sync_state()
         self.report.configure(state='normal')
@@ -1367,7 +1382,7 @@ class App:
         if self._first_setup_dialog is not None and self._first_setup_dialog.window.winfo_exists():
             self._first_setup_dialog.window.lift()
             return
-        self._first_setup_dialog = FirstSetupDialog(self, tuple(MAPPING_LABELS.values()))
+        self._first_setup_dialog = FirstSetupDialog(self, (MAPPING_LABELS[FIXED_MAPPING_MODE],))
 
     def open_release_setup(self):
         from .release_setup import ReleaseDialog
@@ -1377,6 +1392,37 @@ class App:
             self._release_dialog.window.lift()
             return
         self._release_dialog = ReleaseDialog(self)
+
+    def health_input(self):
+        from .health_check import HealthInput
+        def port(key):
+            try:
+                value = int(self.fields[key].get().strip())
+            except ValueError:
+                return None
+            return value if 1 <= value <= 65535 else None
+        get = lambda key: self.fields[key].get().strip()
+        return HealthInput(port('port'), port('manager_port'), get('expected_ip'), get('ip_url'), get('expected_zone'),
+                           get('manager_executable'), get('manager_sha256'))
+
+    def open_health_check(self):
+        from .health_check import HealthDialog
+        if self._operation == 'launch':
+            return
+        if self._health_dialog is not None and self._health_dialog.window.winfo_exists():
+            self._health_dialog.window.lift()
+            return
+        self._health_dialog = HealthDialog(self.root, self.health_input(), check=self.health_check,
+                                           repair=self.health_repair, reverify=self._health_reverify)
+
+    def _health_reverify(self):
+        if self._operation == 'launch':
+            return
+        self.open_first_setup()
+        wizard = self._first_setup_dialog
+        if wizard is not None and wizard.window.winfo_exists():
+            wizard.window.lift()
+            wizard.auto_fill()
 
     def apply_release_candidate(self, baseline, recheck):
         if self._operation == 'launch':
